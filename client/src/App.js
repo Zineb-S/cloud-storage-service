@@ -1,25 +1,32 @@
-import logo from './logo.svg';
+import React from 'react';
+import { BrowserRouter as Router, Routes, Route,Navigate  } from 'react-router-dom';
 import './App.css';
+import HomePage from './components/HomePage';
+import Profile from './components/user/Profile'; 
+import Login from './components/authentication/Login'; 
+import Signup from './components/authentication/Signup'; 
+import AuthProvider, { useAuth } from './services/AuthContext'; 
 
 function App() {
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
+    <Router>
+      <div className="App">
+        <AuthProvider>
+          <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          </Routes>
+        </AuthProvider>
+      </div>
+    </Router>
   );
+}
+
+function ProtectedRoute({ children }) {
+  const auth = useAuth();
+  return auth.user ? children : <Navigate to="/login" />;
 }
 
 export default App;
