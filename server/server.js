@@ -48,17 +48,20 @@ app.post('/upload', (req, res) => {
             return res.status(500).json({ error: 'Error parsing form data' });
         }
 
-        // Ensure folder is a string
-        const folder = Array.isArray(fields.folder) ? fields.folder[0] : fields.folder;
+        // Default username or you can get it from fields or request session
+        const username = 'current user';
+        
+        // Ensure folder is a string and not empty
+        let folder = Array.isArray(fields.folder) ? fields.folder[0] : fields.folder;
+        if (!folder || folder.trim() === '') {
+            folder = username; // Use username or a default value
+        }
+
         const fileArray = files.file;
         const file = Array.isArray(fileArray) ? fileArray[0] : fileArray;
 
         console.log('Parsed folder:', folder);
         console.log('Parsed file:', file);
-
-        if (!folder) {
-            return res.status(400).json({ error: 'Folder is not provided' });
-        }
 
         if (!file) {
             return res.status(400).json({ error: 'File is not provided' });
@@ -93,7 +96,6 @@ app.post('/upload', (req, res) => {
 
             const uploadResult = await parallelUploads3.done();
 
-            const username = 'zineb'; // You might want to get this from fields or request session
             await saveFileMetadata(username, uploadResult.Key, uploadResult.Location, file.size, file.mimetype);
 
             res.status(201).send({
