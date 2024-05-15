@@ -24,11 +24,21 @@ const corsOptions = {
         }
     },
     credentials: true,
-    methods: ['GET', 'POST', 'DELETE', 'UPDATE', 'PUT', 'PATCH'],
+    methods: ['GET', 'POST', 'DELETE'],
     allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
 };
 
+// Use CORS middleware globally
 app.use(cors(corsOptions));
+
+// Handle preflight requests
+app.options('*', cors(corsOptions));
+
+// Add a middleware to log all requests
+app.use((req, res, next) => {
+    console.log(`Received ${req.method} request for ${req.url}`);
+    next();
+});
 
 const s3 = new S3({ region: 'us-east-1' });
 const dynamoDbClient = new DynamoDBClient({ region: 'us-east-1' });
@@ -149,8 +159,8 @@ app.post('/upload', (req, res) => {
     });
 });
 
+app.get('/delete', async (req, res) => {
 
-app.delete('/delete', async (req, res) => {
     const { fileID, username } = req.query; // Ensure both fileID and username are passed as query parameters
 
     const getParams = {

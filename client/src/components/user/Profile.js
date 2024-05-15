@@ -79,9 +79,9 @@ const Profile = () => {
 
     const handleFileDelete = async (fileID) => {
         try {
-            const response = await axios.delete('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/delete', {
+            const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/delete', {
                 params: { fileID, username: user.email },
-                withCredentials: true
+                withCredentials: true,
             });
             alert('File deleted successfully');
             setFiles(files.filter(file => file.fileID.N !== fileID));
@@ -105,36 +105,36 @@ const Profile = () => {
         }
     };
 
-  const handleFileDownload = async (fileID, username) => {
-    try {
-        const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/download', {
-            params: { fileID, username },
-            withCredentials: true,
-            responseType: 'blob' // Important for binary data
-        });
+    const handleFileDownload = async (fileID, username) => {
+        try {
+            const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/download', {
+                params: { fileID, username },
+                withCredentials: true,
+                responseType: 'blob' // Important for binary data
+            });
 
-        const contentDisposition = response.headers['content-disposition'];
-        let filename = 'downloaded_file';
+            const contentDisposition = response.headers['content-disposition'];
+            let filename = 'downloaded_file';
 
-        if (contentDisposition) {
-            const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
-            if (filenameMatch && filenameMatch.length > 1) {
-                filename = filenameMatch[1];
+            if (contentDisposition) {
+                const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+                if (filenameMatch && filenameMatch.length > 1) {
+                    filename = filenameMatch[1];
+                }
             }
-        }
 
-        const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
-        const link = document.createElement('a');
-        link.href = url;
-        link.setAttribute('download', filename);
-        document.body.appendChild(link);
-        link.click();
-        link.remove();
-    } catch (error) {
-        console.error('Error generating download link:', error);
-        alert('Error generating download link: ' + error.message);
-    }
-};
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', filename);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Error generating download link:', error);
+            alert('Error generating download link: ' + error.message);
+        }
+    };
 
     const getFileTypeIcon = (fileType) => {
         switch (fileType) {
