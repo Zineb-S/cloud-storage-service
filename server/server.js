@@ -23,11 +23,11 @@ const saveFileMetadata = async (username, key, location, fileSize, fileType) => 
     const params = {
         TableName: 'bexcloud',
         Item: {
-            fileID: { N: fileID.toString() },
+            fileID: { N: fileID.toString() },  // Ensure fileID is treated as a number
             username: { S: username },
             FilePath: { S: key },
             Location: { S: location },
-            FileSize: { N: fileSize.toString() },
+            FileSize: { N: fileSize.toString() },  // Ensure FileSize is treated as a number
             FileType: { S: fileType },
             CreatedAt: { S: new Date().toISOString() }
         }
@@ -48,8 +48,7 @@ app.post('/upload', (req, res) => {
             return res.status(500).json({ error: 'Error parsing form data' });
         }
 
-        // Default username or you can get it from fields or request session
-        const username = 'current user';
+        const username = Array.isArray(fields.username) ? fields.username[0] : fields.username || 'current user';
         
         // Ensure folder is a string and not empty
         let folder = Array.isArray(fields.folder) ? fields.folder[0] : fields.folder;
@@ -96,7 +95,7 @@ app.post('/upload', (req, res) => {
 
             const uploadResult = await parallelUploads3.done();
 
-            await saveFileMetadata(username, uploadResult.Key, uploadResult.Location, file.size, file.mimetype);
+            await saveFileMetadata(username, uploadResult.Key, uploadResult.Location, file.size.toString(), file.mimetype);
 
             res.status(201).send({
                 message: 'File uploaded successfully',
