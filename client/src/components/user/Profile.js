@@ -4,7 +4,10 @@ import { useAuth } from '../../services/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Profile.css';
+import Modal from 'react-modal';
 import { FaFileImage, FaFileVideo, FaFileAlt, FaDownload, FaTrash, FaShareAlt } from 'react-icons/fa';
+
+Modal.setAppElement('#root'); // Set the root element for accessibility
 
 const Profile = () => {
     const { logout, user } = useAuth();
@@ -12,6 +15,8 @@ const Profile = () => {
     const [file, setFile] = useState(null);
     const [folder, setFolder] = useState('');
     const [files, setFiles] = useState([]);
+    const [modalIsOpen, setModalIsOpen] = useState(false);
+    const [shareLink, setShareLink] = useState('');
 
     useEffect(() => {
         const fetchFiles = async () => {
@@ -75,7 +80,7 @@ const Profile = () => {
     const handleFileDelete = async (fileID) => {
         try {
             const response = await axios.delete('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/delete', {
-                params: { fileID },
+                params: { fileID, username: user.email },
                 withCredentials: true
             });
             alert('File deleted successfully');
@@ -86,18 +91,50 @@ const Profile = () => {
         }
     };
 
-    const handleFileShare = async (fileID) => {
+    const handleFileShare = async (fileID, username) => {
         try {
             const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/share', {
-                params: { fileID },
+                params: { fileID, username },
                 withCredentials: true
             });
-            alert('Share link: ' + response.data.shareLink);
+            setShareLink(response.data.shareLink);
+            setModalIsOpen(true);
         } catch (error) {
             console.error('Error generating share link:', error);
             alert('Error generating share link: ' + error.message);
         }
     };
+
+  const handleFileDownload = async (fileID, username) => {
+    try {
+        const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/download', {
+            params: { fileID, username },
+            withCredentials: true,
+            responseType: 'blob' // Important for binary data
+        });
+
+        const contentDisposition = response.headers['content-disposition'];
+        let filename = 'downloaded_file';
+
+        if (contentDisposition) {
+            const filenameMatch = contentDisposition.match(/filename="([^"]+)"/);
+            if (filenameMatch && filenameMatch.length > 1) {
+                filename = filenameMatch[1];
+            }
+        }
+
+        const url = window.URL.createObjectURL(new Blob([response.data], { type: response.headers['content-type'] }));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', filename);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+    } catch (error) {
+        console.error('Error generating download link:', error);
+        alert('Error generating download link: ' + error.message);
+    }
+};
 
     const getFileTypeIcon = (fileType) => {
         switch (fileType) {
@@ -136,9 +173,9 @@ const Profile = () => {
                             <span className="file-icon">{getFileTypeIcon(file.FileType.S)}</span>
                             <span className="file-name">{file.FilePath.S.split('/').pop()}</span>
                             <span className="file-size">({(file.FileSize.N / 1024).toFixed(2)} KB)</span>
-                            <button onClick={() => window.open(file.Location.S, '_blank')}><FaDownload /></button>
+                            <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
                             <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
-                            <button onClick={() => handleFileShare(file.fileID.N)}><FaShareAlt /></button>
+                            <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
                         </li>
                     ))}
                 </ul>
@@ -155,9 +192,9 @@ const Profile = () => {
                                         <span className="file-icon">{getFileTypeIcon(file.FileType.S)}</span>
                                         <span className="file-name">{file.FilePath.S.split('/').pop()}</span>
                                         <span className="file-size">({(file.FileSize.N / 1024).toFixed(2)} KB)</span>
-                                        <button onClick={() => window.open(file.Location.S, '_blank')}><FaDownload /></button>
+                                        <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
                                         <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
-                                        <button onClick={() => handleFileShare(file.fileID.N)}><FaShareAlt /></button>
+                                        <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
                                     </li>
                                 ))}
                             </ul>
@@ -197,9 +234,22 @@ const Profile = () => {
                     />
                     <button type="submit" className="upload-button">Upload File</button>
                 </form>
-                <button onClick={handleLogout} className="logout-button">Logout</button>
+                
                 {renderFiles(files)}
             </div>
+            <button onClick={handleLogout} className="logout-button">Logout</button>
+
+            <Modal
+                isOpen={modalIsOpen}
+                onRequestClose={() => setModalIsOpen(false)}
+                contentLabel="Share Link Modal"
+                className="Modal"
+                overlayClassName="Overlay"
+            >
+                <h2>Share Link</h2>
+                <p>{shareLink}</p>
+                <button onClick={() => setModalIsOpen(false)}>Close</button>
+            </Modal>
         </div>
     );
 };

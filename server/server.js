@@ -6,6 +6,7 @@ const { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand, DeleteItem
 const { Upload } = require('@aws-sdk/lib-storage');
 const { GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
+
 const fs = require('fs');
 const path = require('path');
 
@@ -16,7 +17,7 @@ const allowedOrigins = ['https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-
 
 const corsOptions = {
     origin: function (origin, callback) {
-        if (allowedOrigins.includes(origin)) {
+        if (!origin || allowedOrigins.includes(origin)) {
             callback(null, true);
         } else {
             callback(new Error('Not allowed by CORS'));
@@ -119,7 +120,7 @@ app.post('/upload', (req, res) => {
             Bucket: 'bexcloud',
             Key: filePath,
             Body: fileStream,
-            ContentType: file.mimetype
+            ContentType: file.mimetype // Ensure correct MIME type
         };
 
         try {
@@ -148,13 +149,15 @@ app.post('/upload', (req, res) => {
     });
 });
 
+
 app.delete('/delete', async (req, res) => {
-    const { fileID } = req.query;
+    const { fileID, username } = req.query; // Ensure both fileID and username are passed as query parameters
 
     const getParams = {
         TableName: 'bexcloud',
         Key: {
-            fileID: { N: fileID }
+            fileID: { N: fileID },
+            username: { S: username }
         }
     };
 
@@ -176,7 +179,8 @@ app.delete('/delete', async (req, res) => {
         const deleteDbParams = {
             TableName: 'bexcloud',
             Key: {
-                fileID: { N: fileID }
+                fileID: { N: fileID },
+                username: { S: username }
             }
         };
 
@@ -190,12 +194,17 @@ app.delete('/delete', async (req, res) => {
 });
 
 app.get('/share', async (req, res) => {
-    const { fileID } = req.query;
+    const { fileID, username } = req.query;
+
+    if (!fileID || !username) {
+        return res.status(400).send('Missing fileID or username in query parameters');
+    }
 
     const getParams = {
         TableName: 'bexcloud',
         Key: {
-            fileID: { N: fileID }
+            fileID: { N: fileID },
+            username: { S: username }
         }
     };
 
@@ -214,10 +223,51 @@ app.get('/share', async (req, res) => {
 
         const shareLink = await getSignedUrl(s3, new GetObjectCommand(getObjectParams), { expiresIn: 3600 });
 
-        res.status(200).send({ shareLink });
+        res.status(200).send({ shareLink, filename: file.FilePath.S.split('/').pop() });
     } catch (error) {
         console.error('Failed to generate share link:', error);
         res.status(500).send('Failed to generate share link.');
+    }
+});
+
+app.get('/download', async (req, res) => {
+    const { fileID, username } = req.query;
+
+    if (!fileID || !username) {
+        return res.status(400).send('Missing fileID or username in query parameters');
+    }
+
+    const getParams = {
+        TableName: 'bexcloud',
+        Key: {
+            fileID: { N: fileID },
+            username: { S: username }
+        }
+    };
+
+    try {
+        const data = await dynamoDbClient.send(new GetItemCommand(getParams));
+        const file = data.Item;
+
+        if (!file) {
+            return res.status(404).send('File not found');
+        }
+
+        const getObjectParams = {
+            Bucket: 'bexcloud',
+            Key: file.FilePath.S
+        };
+
+        const getObjectCommand = new GetObjectCommand(getObjectParams);
+        const objectResponse = await s3.send(getObjectCommand);
+
+        const fileName = file.FilePath.S.split('/').pop();
+        res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+        res.setHeader('Content-Type', file.FileType.S);
+        objectResponse.Body.pipe(res);
+    } catch (error) {
+        console.error('Failed to download file:', error);
+        res.status(500).send('Failed to download file.');
     }
 });
 
