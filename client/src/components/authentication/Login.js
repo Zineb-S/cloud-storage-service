@@ -52,7 +52,7 @@ const Login = () => {
     };
     const domain = "bexcloud.auth.us-east-1.amazoncognito.com";  // Replace with your Cognito domain
     const clientId = "7rh2hckhhrp1hlvucsdqd1gabq";  // Replace with your Cognito App Client ID
-    const redirectUri = encodeURIComponent("https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com/callback");  // Your redirect URI
+    const redirectUri = encodeURIComponent("https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8081/callback");  // Your redirect URI
 
 const signInUrl = `https://${domain}/login?response_type=token&client_id=${clientId}&redirect_uri=${redirectUri}`;
     return (

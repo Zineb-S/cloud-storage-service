@@ -6,7 +6,8 @@ const { DynamoDBClient, PutItemCommand, QueryCommand, GetItemCommand, DeleteItem
 const { Upload } = require('@aws-sdk/lib-storage');
 const { GetObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
 const { getSignedUrl } = require('@aws-sdk/s3-request-presigner');
-
+const { Lambda } = require('aws-sdk');
+const lambda = new Lambda({ region: 'us-east-1' });
 const fs = require('fs');
 const path = require('path');
 
@@ -43,6 +44,8 @@ app.use((req, res, next) => {
 const s3 = new S3({ region: 'us-east-1' });
 const dynamoDbClient = new DynamoDBClient({ region: 'us-east-1' });
 
+const DEFAULT_MAX_STORAGE = 500 * 1024 * 1024; // 500 MB for now
+
 const saveFileMetadata = async (username, key, location, fileSize, fileType) => {
     const fileID = Date.now() + Math.floor(Math.random() * 1000);
     const params = {
@@ -66,6 +69,19 @@ const saveFileMetadata = async (username, key, location, fileSize, fileType) => 
         throw error;
     }
 };
+const invokeLambda = async (username, fileSize, operation) => {
+    const params = {
+        FunctionName: 'UpdateUserStorage', // Replace with your Lambda function name
+        InvocationType: 'Event',
+        Payload: JSON.stringify({ username, fileSize, operation })
+    };
+
+    try {
+        await lambda.invoke(params).promise();
+    } catch (error) {
+        console.error('Error invoking Lambda function:', error);
+    }
+};
 
 app.get('/files', async (req, res) => {
     const { username } = req.query;
@@ -83,12 +99,17 @@ app.get('/files', async (req, res) => {
     try {
         const data = await dynamoDbClient.send(new QueryCommand(params));
         console.log('Files fetched successfully:', data.Items);
-        res.status(200).json(data.Items);
+
+        // Calculate total storage used
+        const totalStorageUsed = data.Items.reduce((acc, item) => acc + parseInt(item.FileSize.N, 10), 0);
+
+        res.status(200).json({ files: data.Items, totalStorageUsed, maxStorage: DEFAULT_MAX_STORAGE });
     } catch (error) {
         console.error('Failed to fetch user files:', error);
         res.status(500).send('Failed to fetch user files.');
     }
 });
+
 
 app.post('/upload', (req, res) => {
     const form = new formidable.IncomingForm();
@@ -108,32 +129,38 @@ app.post('/upload', (req, res) => {
         const fileArray = files.file;
         const file = Array.isArray(fileArray) ? fileArray[0] : fileArray;
 
-        console.log('Parsed folder:', folder);
-        console.log('Parsed file:', file);
-
         if (!file) {
             console.error('No file provided');
             return res.status(400).json({ error: 'File is not provided' });
         }
 
-        console.log('File details:', {
-            originalFilename: file.originalFilename,
-            filepath: file.filepath,
-            mimetype: file.mimetype,
-            size: file.size
-        });
-
-        const filePath = path.join(folder, file.originalFilename || file.newFilename);
-        const fileStream = fs.createReadStream(file.filepath);
-
-        const uploadParams = {
-            Bucket: 'bexcloud',
-            Key: filePath,
-            Body: fileStream,
-            ContentType: file.mimetype // Ensure correct MIME type
+        const params = {
+            TableName: 'bexcloud',
+            IndexName: 'UsernameIndex',
+            KeyConditionExpression: 'username = :username',
+            ExpressionAttributeValues: {
+                ':username': { S: username }
+            }
         };
 
         try {
+            const data = await dynamoDbClient.send(new QueryCommand(params));
+            const totalStorageUsed = data.Items.reduce((acc, item) => acc + parseInt(item.FileSize.N, 10), 0);
+
+            if (totalStorageUsed + file.size > DEFAULT_MAX_STORAGE) {
+                return res.status(400).json({ error: 'Storage limit exceeded' });
+            }
+
+            const filePath = path.join(folder, file.originalFilename || file.newFilename);
+            const fileStream = fs.createReadStream(file.filepath);
+
+            const uploadParams = {
+                Bucket: 'bexcloud',
+                Key: filePath,
+                Body: fileStream,
+                ContentType: file.mimetype // Ensure correct MIME type
+            };
+
             const parallelUploads3 = new Upload({
                 client: s3,
                 params: uploadParams
@@ -145,23 +172,23 @@ app.post('/upload', (req, res) => {
 
             const uploadResult = await parallelUploads3.done();
 
-            console.log('File uploaded successfully:', uploadResult);
             await saveFileMetadata(username, uploadResult.Key, uploadResult.Location, file.size.toString(), file.mimetype);
+
+            await invokeLambda(username, file.size, 'upload');
 
             res.status(201).send({
                 message: 'File uploaded successfully',
                 location: uploadResult.Location
             });
         } catch (error) {
-            console.error('Failed to upload file to S3:', error);
+            console.error('Failed to upload file:', error);
             res.status(500).send('Failed to upload file to S3.');
         }
     });
 });
 
 app.get('/delete', async (req, res) => {
-
-    const { fileID, username } = req.query; // Ensure both fileID and username are passed as query parameters
+    const { fileID, username } = req.query;
 
     const getParams = {
         TableName: 'bexcloud',
@@ -196,13 +223,14 @@ app.get('/delete', async (req, res) => {
 
         await dynamoDbClient.send(new DeleteItemCommand(deleteDbParams));
 
+        await invokeLambda(username, parseInt(file.FileSize.N, 10), 'delete');
+
         res.status(200).send('File deleted successfully');
     } catch (error) {
         console.error('Failed to delete file:', error);
         res.status(500).send('Failed to delete file.');
     }
 });
-
 app.get('/share', async (req, res) => {
     const { fileID, username } = req.query;
 

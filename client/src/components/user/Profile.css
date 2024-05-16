@@ -1,149 +1,100 @@
-/* Profile.css */
 .profile-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    height: 100vh;
-    background-color: #f5f5f5;
-    font-family: 'Arial', sans-serif;
+    padding: 20px;
 }
 
 .profile-content {
-    background: white;
+    max-width: 800px;
+    margin: 0 auto;
+    background: #f9f9f9;
     padding: 20px;
     border-radius: 8px;
-    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.profile-content h1 {
     text-align: center;
-}
-
-.profile-form {
-    display: flex;
-    flex-direction: column;
-    gap: 15px;
-}
-
-.input-field {
-    padding: 10px;
-    font-size: 16px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    width: 100%;
-}
-
-.upload-button {
-    padding: 10px;
-    font-size: 16px;
-    color: white;
-    background-color: #007bff;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.upload-button:hover {
-    background-color: #0056b3;
-}
-
-.logout-button {
-    margin-top: 20px;
-    padding: 10px;
-    font-size: 16px;
-    color: white;
-    background-color: #dc3545;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-}
-
-.logout-button:hover {
-    background-color: #c82333;
-}
-.profile-container {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 20px;
-}
-
-.profile-content {
-    width: 100%;
-    max-width: 800px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-}
-
-.profile-form {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
     margin-bottom: 20px;
 }
 
+.profile-view, .profile-edit {
+    margin-bottom: 20px;
+}
+
+.profile-view p {
+    font-size: 18px;
+}
+
 .input-field {
-    margin-bottom: 10px;
-    padding: 8px;
-    font-size: 16px;
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
     border: 1px solid #ccc;
     border-radius: 4px;
 }
 
-.upload-button, .logout-button {
+.save-button, .edit-button, .upload-button, .logout-button {
     padding: 10px 20px;
-    font-size: 16px;
-    cursor: pointer;
+    margin: 10px 0;
+    background-color: #007bff;
+    color: white;
     border: none;
     border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.save-button:hover, .edit-button:hover, .upload-button:hover, .logout-button:hover {
+    background-color: #0056b3;
+}
+
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+}
+
+.file-item span {
+    margin: 0 10px;
+}
+
+.file-item button {
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+.storage-info {
+    margin: 20px 0;
+}
+
+.storage-bar {
+    width: 100%;
+    background-color: #e0e0e0;
+    border-radius: 8px;
+    overflow: hidden;
+    height: 20px;
     margin-bottom: 10px;
 }
 
-.upload-button {
-    background-color: #4CAF50;
-    color: white;
-}
-
-.logout-button {
-    background-color: #f44336;
-    color: white;
-}
-
-button[type="button"] {
+.storage-used {
+    height: 100%;
     background-color: #007bff;
-    color: white;
-    padding: 10px;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    margin-bottom: 5px;
 }
 
-ul {
-    list-style-type: none;
-    padding: 0;
-}
-
-ul li {
-    padding: 5px 0;
-}
 .Modal {
-    position: absolute;
+    position: fixed;
     top: 50%;
     left: 50%;
     right: auto;
     bottom: auto;
-    width:90%;
-    height: 500px;
+    margin-right: -50%;
     transform: translate(-50%, -50%);
     background: white;
     padding: 20px;
-    border: 1px solid #ccc;
-    boxShadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    text-align-last: left;
-    text-align: left;
-    margin-right: 200px;
-    
-
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
 }
 
 .Overlay {
@@ -152,5 +103,5 @@ ul li {
     left: 0;
     right: 0;
     bottom: 0;
-    backgroundColor: rgba(0, 0, 0, 0.75);
+    background-color: rgba(0, 0, 0, 0.5);
 }
