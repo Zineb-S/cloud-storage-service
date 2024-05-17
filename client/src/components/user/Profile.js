@@ -66,21 +66,23 @@ const Profile = () => {
         }
     };
 
-    const fetchFiles = async () => {
-        try {
-            console.log('Fetching files for user:', user.email);
-            const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/files', {
-                params: { username: user.email },
-                withCredentials: true
-            });
-            console.log('Files fetched successfully:', response.data);
-            setFiles(response.data.files);
-            setTotalStorageUsed(response.data.totalStorageUsed);
-            setMaxStorage(response.data.maxStorage);
-        } catch (error) {
-            console.error('Error fetching files:', error);
-        }
-    };
+   const fetchFiles = async () => {
+    try {
+        console.log('Fetching files for user:', user.email);
+        const response = await axios.get('https://0a215c9039ba4770a11d847aa1b501ce.vfs.cloud9.us-east-1.amazonaws.com:8080/files', {
+            params: { username: user.email },
+            withCredentials: true
+        });
+        console.log('Files fetched successfully:', response.data);
+        console.log('Files data:', response.data.files);
+        setFiles(response.data.files);
+        setTotalStorageUsed(response.data.totalStorageUsed);
+        setMaxStorage(response.data.maxStorage);
+    } catch (error) {
+        console.error('Error fetching files:', error);
+    }
+};
+
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
@@ -191,62 +193,62 @@ const Profile = () => {
         }
     };
 
-    const renderFiles = (files) => {
-        const folders = {};
-        const userFiles = [];
+  const renderFiles = (files) => {
+    const folders = {};
+    const userFiles = [];
 
-        files.forEach(file => {
-            const folder = file.FilePath.S.split('/')[0];
-            if (folder === user.email) {
-                userFiles.push(file);
-            } else {
-                if (!folders[folder]) {
-                    folders[folder] = [];
-                }
-                folders[folder].push(file);
+    files.forEach(file => {
+        const folder = file.FilePath && file.FilePath.S ? file.FilePath.S.split('/')[0] : 'Unknown Folder';
+        if (folder === user.email) {
+            userFiles.push(file);
+        } else {
+            if (!folders[folder]) {
+                folders[folder] = [];
             }
-        });
+            folders[folder].push(file);
+        }
+    });
 
-        return (
-            <div>
-                <h3>Files:</h3>
-                <ul>
-                    {userFiles.map((file, index) => (
-                        <li key={index} className="file-item">
-                            <span className="file-icon">{getFileTypeIcon(file.FileType.S)}</span>
-                            <span className="file-name">{file.FilePath.S.split('/').pop()}</span>
-                            <span className="file-size">({(file.FileSize.N / 1024).toFixed(2)} KB)</span>
-                            <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
-                            <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
-                            <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
-                        </li>
-                    ))}
-                </ul>
-                <h3>Folders:</h3>
-                {Object.keys(folders).map((folder, index) => (
-                    <div key={index}>
-                        <button type="button" onClick={() => toggleAccordion(index)}>
-                            {folder}
-                        </button>
-                        <div id={`accordion-${index}`} style={{ display: 'none' }}>
-                            <ul>
-                                {folders[folder].map((file, idx) => (
-                                    <li key={idx} className="file-item">
-                                        <span className="file-icon">{getFileTypeIcon(file.FileType.S)}</span>
-                                        <span className="file-name">{file.FilePath.S.split('/').pop()}</span>
-                                        <span className="file-size">({(file.FileSize.N / 1024).toFixed(2)} KB)</span>
-                                        <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
-                                        <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
-                                        <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
-                                    </li>
-                                ))}
-                            </ul>
-                        </div>
-                    </div>
+    return (
+        <div>
+            <h3>Files:</h3>
+            <ul>
+                {userFiles.map((file, index) => (
+                    <li key={index} className="file-item">
+                        <span className="file-icon">{getFileTypeIcon(file.FileType && file.FileType.S)}</span>
+                        <span className="file-name">{file.FilePath && file.FilePath.S ? file.FilePath.S.split('/').pop() : 'Unknown File'}</span>
+                        <span className="file-size">({file.FileSize && file.FileSize.N ? (file.FileSize.N / 1024).toFixed(2) : '0'} KB)</span>
+                        <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
+                        <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
+                        <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
+                    </li>
                 ))}
-            </div>
-        );
-    };
+            </ul>
+            <h3>Folders:</h3>
+            {Object.keys(folders).map((folder, index) => (
+                <div key={index}>
+                    <button type="button" onClick={() => toggleAccordion(index)}>
+                        {folder}
+                    </button>
+                    <div id={`accordion-${index}`} style={{ display: 'none' }}>
+                        <ul>
+                            {folders[folder].map((file, idx) => (
+                                <li key={idx} className="file-item">
+                                    <span className="file-icon">{getFileTypeIcon(file.FileType && file.FileType.S)}</span>
+                                    <span className="file-name">{file.FilePath && file.FilePath.S ? file.FilePath.S.split('/').pop() : 'Unknown File'}</span>
+                                    <span className="file-size">({file.FileSize && file.FileSize.N ? (file.FileSize.N / 1024).toFixed(2) : '0'} KB)</span>
+                                    <button onClick={() => handleFileDownload(file.fileID.N, user.email)}><FaDownload /></button>
+                                    <button onClick={() => handleFileDelete(file.fileID.N)}><FaTrash /></button>
+                                    <button onClick={() => handleFileShare(file.fileID.N, user.email)}><FaShareAlt /></button>
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+                </div>
+            ))}
+        </div>
+    );
+};
 
     const toggleAccordion = (index) => {
         const element = document.getElementById(`accordion-${index}`);
